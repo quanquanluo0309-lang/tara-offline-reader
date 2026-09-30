@@ -44,7 +44,8 @@
   .actions button, .actions label.btn { padding: 1px 6px; font-size: 11px; border-radius: 5px; }
   button, label.btn, select { font: inherit; font-size: 12px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--btn-line);
            background: var(--btn-bg); color: var(--fg); cursor: pointer; }
-  button:hover, label.btn:hover { border-color: var(--accent); }
+  /* 悬停样式只给有悬停能力的设备：触屏上 :hover 会粘在手指最后碰过的元素上，长按抬手后手指下的菜单项带着强调色边框，像被选中 */
+  @media (hover: hover) { button:hover, label.btn:hover { border-color: var(--accent); } }
   button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
   button.active { border-color: var(--accent); color: var(--accent); }
   input[type=file] { display: none; }
@@ -298,6 +299,10 @@
   .loc-head { cursor: pointer; }
   .loc-head::after { content: '›'; margin-left: auto; color: var(--muted); font-size: 16px; line-height: 1; }
   body.touch-reader #main { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
+  /* 不只正文：长按开出菜单时手指还按着，系统的长按选字会落到刚弹出的菜单文字上（拷贝 / 查询 / 翻译条）。
+     触屏壳的全部界面（顶栏、底栏、情境条、面板、菜单、抽屉、toast）都不可选，只有输入框保留编辑（2026-09-30 真机反馈） */
+  body.touch-reader, body.touch-reader header, body.touch-reader #side, #t-bar, #t-ctx, #t-pop, #t-pill, #t-sheet, body.touch-reader .toast { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  body.touch-reader input, body.touch-reader textarea, #t-sheet input, #t-sheet textarea { -webkit-user-select: text; user-select: text; }
   .cue.pressing .en, .zhc.pressing { background: var(--hover); border-radius: 3px; }
   /* 遮盖：轻点揭开的句子 */
   body.touch-reader.show-blind .cue.revealed .en, body.touch-reader.show-blind .cue.revealed .zh, body.touch-reader.show-blind .zhc.revealed { filter: none; }
@@ -305,6 +310,8 @@
   mark.picking { background: color-mix(in srgb, var(--accent) 26%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 26%, transparent); border-radius: 3px; color: inherit; }
   body.annotating.show-zh-only .cue .en { display: inline; }
   body.annotating.show-zh-only .cue .zh { display: inline; }
+  /* 标注态里遮盖暂不生效：遮盖开关与已揭开的句子都不动，退出标注即回到原来的遮盖（2026-09-30 用户） */
+  body.annotating.show-blind .cue .en, body.annotating.show-blind .cue .zh, body.annotating.show-blind .zh-para .zhc { filter: none; }
   /* 两点圈选中的句子 */
   .cue.in-range .en, .cue.in-range .zh, .zhc.in-range { background: var(--active-bg); box-shadow: 0 0 0 2px var(--active-bg); border-radius: 3px; }
   /* 目录抽屉：左侧全高 */
@@ -381,6 +388,7 @@
   /* 底部菜单 / 表单（一个 dialog 复用） */
   #t-sheet { width: min(560px, 100%); max-width: 100%; max-height: 84dvh; margin: auto auto 0; padding: 10px 12px max(14px, env(safe-area-inset-bottom)); border: 0; border-radius: 18px 18px 0 0; background: var(--bg); color: var(--fg); overflow: auto; overscroll-behavior: contain; }
   #t-sheet::backdrop { background: #0006; }
+  #t-sheet:focus { outline: none; }
   #t-sheet h3 { font-size: 13px; color: var(--muted); font-weight: 500; margin: 6px 4px 8px; line-height: 1.4; }
   #t-sheet .items { display: grid; gap: 6px; }
   #t-sheet .items button { text-align: left; min-height: 48px; font-size: 16px; padding: 10px 14px; border-radius: 12px; background: var(--card); }
@@ -431,7 +439,7 @@
 #install-help p { margin: 4px 0; }
 @media(max-width:760px), (hover:none) and (pointer:coarse) { .offline-panel { margin: 10px 12px 0; } }
 </style>
-<meta name="app-build" content="788be7dd5ec7">
+<meta name="app-build" content="d122281bdf08">
 </head>
 <body class="show-zh-para">
 <header>
@@ -1880,7 +1888,7 @@
       var seg = function (attr, items, cur) { return '<div class="seg">' + items.map(function (it) { return '<button type="button" data-' + attr + '="' + it[0] + '"' + (it[0] === cur ? ' class="active"' : '') + (it[2] ? ' disabled' : '') + '>' + it[1] + '</button>'; }).join('') + '</div>'; };
       pop.innerHTML = '<div class="t-row" style="margin-top:0"><span>显示</span><span class="hint">左右轻扫正文 ⇄ ' + MODE_NAME[flipTarget()] + '</span></div>' +
         seg('mode', [['off', '英文'], ['cue', '逐句对照'], ['para', '段末对照'], ['only', '中文']], state.zhMode) +
-        '<div class="t-row"><span>遮盖字幕 <span class="hint">· 轻点句子揭开 / 盖回</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
+        '<div class="t-row"><span>遮盖字幕 <span class="hint">' + (annotating ? '· 标注时暂不遮盖，完成后恢复' : '· 轻点句子揭开 / 盖回') + '</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
         '<div class="t-row"><span>轻点范围</span>' + seg('scope', [['cue', '一句', !state.blind], ['para', '一段', !state.blind]], state.coverScope) + '</div>' +
         '<div class="t-row"><span class="hint">一段 = 说话人的一轮</span><span><button type="button" class="mini" id="t-revealall"' + (state.blind ? '' : ' disabled') + '>全部揭开</button> <button type="button" class="mini" id="t-coverall"' + (state.blind ? '' : ' disabled') + '>全部盖上</button></span></div>';
       pop.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () { setZhMode(b.dataset.mode); renderPop(); }; });
@@ -1906,11 +1914,12 @@
     $('t-more').onclick = function () { moreSheet(); };
     function setAnnotating(on, silent) {
       on = !!on; if (on === annotating && !silent) return;
-      annotating = on; document.body.classList.toggle('annotating', on);
+      // 仅中文显示时标注态临时露出英文，正文高度翻倍：进出都要把正在读的那句钉在原位，
+      // 否则进入时跳回前文、找回位置后退出又被夹到文末（Safari 没有滚动锚定；2026-09-30 用户反馈）
+      annotating = on; withScrollAnchor(function () { document.body.classList.toggle('annotating', on); });
       clearPick(); clearRange(); closePop(); closeDrawer();
-      if (on && state.blind) { state.blind = false; applyBlind(); savePrefs(); }
       sync();
-      if (!silent) toast(on ? '标注：轻点一个词；再点同句里的末词可选短语' : '已退出标注');
+      if (!silent) toast(on ? '标注：轻点一个词；再点同句里的末词可选短语' : state.blind ? '已退出标注 · 遮盖恢复' : '已退出标注');
     }
 
     // ---------- 选词（标注态）：caretRangeFromPoint 取字符偏移 → 词边界；同句第二次轻点扩成短语 ----------
@@ -2004,7 +2013,9 @@
 
     // ---------- 菜单与表单：一个 dialog 复用 ----------
     var sheetOpenedAt = 0;
-    function openSheet() { closePop(); if (!sheet.open) sheet.showModal(); sheetOpenedAt = Date.now(); }
+    // showModal 默认把焦点给第一个按钮，第一项会带着焦点环像「已选中」：焦点改落在 dialog 本身（表单随后自己聚焦输入框）
+    sheet.tabIndex = -1;
+    function openSheet() { closePop(); if (!sheet.open) sheet.showModal(); sheet.focus({ preventScroll: true }); sheetOpenedAt = Date.now(); }
     function closeSheet() { if (sheet.open) sheet.close(); }
     // 长按开出菜单时手指还没抬起，随后的合成 click 落在 dialog 背景上：刚打开的 500 ms 内不当作「点背景关闭」
     sheet.addEventListener('click', function (e) { if (e.target === sheet && Date.now() - sheetOpenedAt > 300) closeSheet(); });
@@ -2030,10 +2041,9 @@
       items.push(['🔁 循环这句', function () { localSeekGuard(); loopCue(id); }]);
       if (para) items.push(['🔁 循环这一段', function () { localSeekGuard(); loopPara(+para.dataset.lo, +para.dataset.hi); }, { sub: (SPK_NAME[para.dataset.speaker] || para.dataset.speaker) + ' 的一轮 · ' + (+para.dataset.hi - +para.dataset.lo + 1) + ' 句' }]);
       if (pi >= 0) items.push(['🔁 循环漏听 #' + state.locOrder[pi], function () { localSeekGuard(); setLoop(state.located[pi]); }, { sub: esc(state.located[pi].label || '') }]);
-      if (state.blind && para) { var lo = +para.dataset.lo, hi = +para.dataset.hi, shown = state.revealed.has(id); items.push([shown ? '盖上这一段' : '揭开这一段', function () { setRevealed([lo, hi], !shown); }]); }
+      if (state.blind && !annotating && para) { var lo = +para.dataset.lo, hi = +para.dataset.hi, shown = state.revealed.has(id); items.push([shown ? '盖上这一段' : '揭开这一段', function () { setRevealed([lo, hi], !shown); }]); }
       items.push(['★ 标记为关键句', function () { markKey([id, id]); }, { sub: pi >= 0 ? '归入漏听 #' + state.locOrder[pi] : '尚无所属段落，将一并建段' }]);
       items.push(['⟷ 从这句圈段…', function () { startRange(id); }, { sub: '再轻点终点句，保存为漏听段落或关键句' }]);
-      items.push(['✎ 选词标注', function () { setAnnotating(true); }]);
       if (pi >= 0) items.push(['编辑漏听 #' + state.locOrder[pi] + '…', function () { locSheet(pi); }]);
       items.push(['复制英文', function () { navigator.clipboard.writeText(c.en).then(function () { toast('已复制'); }, function () { toast('复制失败'); }); }]);
       menu(fmt(c.s) + ' · ' + esc(c.en), items);
