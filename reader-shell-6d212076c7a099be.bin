@@ -243,6 +243,11 @@
   .loc-head .t { color: var(--muted); }
   .loc-head button { padding: 0 7px; font-size: 11px; line-height: 1.6; }
   .loc-cont { font-size: 11px; color: var(--loc-fg); opacity: .85; margin: 0 0 4px; }
+  .loc-cont .loc-loop { cursor: pointer; margin-left: 6px; user-select: none; }
+  /* 正在循环的漏听段落：它的每一块（含「续」块）描一圈强调色，循环到哪为止一眼可见；关键句循环标在「句 N」上 */
+  .loc-block.looping { outline: 2px solid var(--accent); outline-offset: -2px; }
+  .loc-block.looping > .loc-head [data-loop] { border-color: var(--accent); color: var(--accent); }
+  .key-tag.looping { outline: 2px solid var(--accent); outline-offset: 1px; }
   .loc-end { font-size: 11px; color: var(--muted); margin-top: 4px; text-align: right; }
   .key-tag { cursor: pointer; display: inline-block; font-size: 10px; line-height: 1.5; background: var(--key-line); color: #fff; border-radius: 3px; padding: 0 4px; margin-right: 4px; vertical-align: 2px; }
   .zh-para .zhc { margin-right: 4px; }
@@ -291,27 +296,40 @@
   .main-col { max-width: none; }
   main { padding: 8px max(14px, env(safe-area-inset-right)) calc(var(--tbar, 96px) + 32px) max(14px, env(safe-area-inset-left)); touch-action: manipulation; }
   .main-tools { display: none; }
-  .en, .zh, .zh-para { font-size: 17px; line-height: 1.75; }
-  .zh-para { font-size: 15px; }
-  .cue .ts, .cue .cue-loop, .para .para-loop { display: none; }
-  .cue.first .ts { display: inline; opacity: 1; font-size: 11px; margin-right: 6px; }
+  /* 中英文同一字号（逐句中文、段末中文、仅中文都是）；中文靠颜色与缩进区分，不靠缩小字号（2026-09-30 用户）。
+     选择器要压过桌面的 .cue .zh / .zh-para 字号 */
+  .cue .en, .cue .zh, .zh-para, body.show-zh-only .cue .zh { font-size: 17px; line-height: 1.75; }
+  /* 句前 / 段前的时间与循环标记常驻：轻点时间 = 定位，轻点 🔁 = 循环这句 / 这段（再点停止），不用长按进菜单（2026-09-30 用户）。
+     触点靠行内 padding 撑开，不改行高；🔁 平时去色压淡，正在循环的那个恢复彩色；段的 🔁 带「段」字以区别于句的 */
+  .cue .ts { display: inline; opacity: 1; font-size: 11px; padding: 9px 3px; margin: 0 1px 0 -3px; }
+  .cue .cue-loop, .cue:hover .cue-loop, .para .para-loop, .para:hover .para-loop { display: inline; position: static; opacity: .45; filter: grayscale(1); font-size: 12px; padding: 9px 5px; margin: 0 2px 0 -2px; transition: none; }
+  .para .para-loop::after { content: '段'; font-size: 10px; color: var(--muted); }
+  .cue.looping .cue-loop, .para.looping .para-loop { opacity: 1; filter: none; }
+  /* 每一层段落都有自己的 🔁：漏听段落在标题栏（与「续」块），说话人一轮在段首，句在句首 */
   .loc-head button { display: none; }
+  .loc-head button[data-loop] { display: inline-flex; align-items: center; min-height: 32px; padding: 0 10px; font-size: 12px; border-radius: 8px; background: transparent; }
+  .loc-cont .loc-loop { padding: 9px 8px; opacity: .45; filter: grayscale(1); font-size: 12px; }
+  .loc-block.looping > .loc-cont .loc-loop { opacity: 1; filter: none; }
   .loc-head { cursor: pointer; }
-  .loc-head::after { content: '›'; margin-left: auto; color: var(--muted); font-size: 16px; line-height: 1; }
+  /* 两行：编号 + 标签占满第一行；时间信息、🔁、› 同在第二行（时间信息自己折行，不把 🔁 和 › 挤到第三行） */
+  .loc-head .loc-label { flex: 1 1 0; min-width: 50%; }
+  .loc-head .t { flex: 1 1 0; min-width: 40%; }
+  .loc-head::after { content: '›'; color: var(--muted); font-size: 16px; line-height: 1; }
   body.touch-reader #main { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; }
   /* 不只正文：长按开出菜单时手指还按着，系统的长按选字会落到刚弹出的菜单文字上（拷贝 / 查询 / 翻译条）。
      触屏壳的全部界面（顶栏、底栏、情境条、面板、菜单、抽屉、toast）都不可选，只有输入框保留编辑（2026-09-30 真机反馈） */
   body.touch-reader, body.touch-reader header, body.touch-reader #side, #t-bar, #t-ctx, #t-pop, #t-pill, #t-sheet, body.touch-reader .toast { -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
   body.touch-reader input, body.touch-reader textarea, #t-sheet input, #t-sheet textarea { -webkit-user-select: text; user-select: text; }
-  .cue.pressing .en, .zhc.pressing { background: var(--hover); border-radius: 3px; }
   /* 遮盖：轻点揭开的句子 */
   body.touch-reader.show-blind .cue.revealed .en, body.touch-reader.show-blind .cue.revealed .zh, body.touch-reader.show-blind .zhc.revealed { filter: none; }
-  /* 标注态：选词中的词、仅中文时临时露出英文 */
+  /* 标注态分「选词」「选句」两个对象。选词要看得见英文：仅中文时临时露出英文、遮盖暂不生效；选句不改显示 */
   mark.picking { background: color-mix(in srgb, var(--accent) 26%, transparent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 26%, transparent); border-radius: 3px; color: inherit; }
-  body.annotating.show-zh-only .cue .en { display: inline; }
-  body.annotating.show-zh-only .cue .zh { display: inline; }
-  /* 标注态里遮盖暂不生效：遮盖开关与已揭开的句子都不动，退出标注即回到原来的遮盖（2026-09-30 用户） */
-  body.annotating.show-blind .cue .en, body.annotating.show-blind .cue .zh, body.annotating.show-blind .zh-para .zhc { filter: none; }
+  body.edit-word.show-zh-only .cue .en { display: inline; }
+  body.edit-word.show-zh-only .cue .zh { display: inline; }
+  /* 选词时遮盖暂不生效：遮盖开关与已揭开的句子都不动，退出或换到选句即回到原来的遮盖（2026-09-30 用户） */
+  body.edit-word.show-blind .cue .en, body.edit-word.show-blind .cue .zh, body.edit-word.show-blind .zh-para .zhc { filter: none; }
+  /* 选词时英文句放开系统选区：长按、拖动两端可以自己选任意起止（跨词、半个词都行）。轻点选词只是快捷方式，不能把用户自己的选法挡掉（2026-09-30 用户） */
+  body.edit-word #main .cue .en { -webkit-user-select: text; user-select: text; -webkit-touch-callout: default; }
   /* 两点圈选中的句子 */
   .cue.in-range .en, .cue.in-range .zh, .zhc.in-range { background: var(--active-bg); box-shadow: 0 0 0 2px var(--active-bg); border-radius: 3px; }
   /* 目录抽屉：左侧全高 */
@@ -338,12 +356,13 @@
   #t-marks[hidden] { display: none; }
   #t-loopbar { position: absolute; left: 0; right: 0; top: 4px; height: 22px; border-radius: 6px; }
   #t-loopbar[hidden] { display: none; }
-  #t-seek { position: absolute; left: 0; top: 0; width: 100%; height: 30px; margin: 0; padding: 0; -webkit-appearance: none; appearance: none; background: transparent; touch-action: pan-y; }
+  #t-seek { position: absolute; left: -12px; top: 0; width: calc(100% + 24px); height: 30px; margin: 0; padding: 0; -webkit-appearance: none; appearance: none; background: transparent; touch-action: pan-y; }
   #t-seek:disabled { opacity: .5; }
   #t-seek::-webkit-slider-runnable-track { height: 30px; background: transparent; }
-  #t-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; margin-top: 6px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); box-shadow: 0 1px 3px #0005; }
+  /* 播放位置只画一条细竖线，不用圆点（圆点盖住循环区间里的句子分区；2026-09-30 用户）。触点仍是 24 px 宽的透明块，可以拖 */
+  #t-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 24px; height: 30px; margin: 0; border: 0; border-radius: 0; box-shadow: none; background: linear-gradient(var(--accent), var(--accent)) center / 3px 24px no-repeat, linear-gradient(var(--bg), var(--bg)) center / 5px 26px no-repeat; }
   #t-seek::-moz-range-track { height: 30px; background: transparent; }
-  #t-seek::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+  #t-seek::-moz-range-thumb { width: 24px; height: 30px; border: 0; border-radius: 0; background: linear-gradient(var(--accent), var(--accent)) center / 3px 24px no-repeat, linear-gradient(var(--bg), var(--bg)) center / 5px 26px no-repeat; }
   .t-keys { display: flex; align-items: center; justify-content: space-between; height: 50px; }
   .t-keys button { flex: 1; height: 50px; border: 0; background: transparent; border-radius: 12px; padding: 0; color: var(--fg); font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
   .t-keys button.active { color: var(--accent); }
@@ -357,7 +376,11 @@
   /* 情境条：圈选 / 选词二选一，贴在底栏上方 */
   #t-ctx { position: fixed; z-index: 36; left: 8px; right: 8px; bottom: calc(var(--tbar, 96px) + 8px); display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 12px; background: var(--card); box-shadow: 0 4px 16px #0003; font-size: 13px; }
   #t-ctx[hidden] { display: none; }
-  #t-ctx .txt { flex-basis: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #t-ctx .txt { flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #t-ctx .brk { flex-basis: 100%; height: 0; }
+  #t-ctx .seg { flex: 0 0 auto; }
+  #t-ctx .seg button { flex: 1 0 auto; min-height: 34px; min-width: 48px; font-size: 13px; }
+  #t-ctx button.mini { flex: 0 0 auto; min-height: 34px; font-size: 13px; padding: 0 10px; }
   #t-ctx .txt b { color: var(--accent); }
   #t-ctx button { min-height: 40px; font-size: 14px; flex: 1 0 auto; }
   #t-ctx button.b-vocab { border-color: var(--vocab-line); } #t-ctx button.b-colloc { border-color: var(--colloc-line); } #t-ctx button.b-q { border-color: var(--q-line); }
@@ -439,7 +462,7 @@
 #install-help p { margin: 4px 0; }
 @media(max-width:760px), (hover:none) and (pointer:coarse) { .offline-panel { margin: 10px 12px 0; } }
 </style>
-<meta name="app-build" content="d122281bdf08">
+<meta name="app-build" content="efdbddba7694">
 </head>
 <body class="show-zh-para">
 <header>
@@ -760,7 +783,6 @@
   function toggleBlindPara() { state.blindPara = !state.blindPara; applyBlind(); savePrefs(); toast(state.blindPara ? '盲听：仅当前段落可见' : '盲听：全部不可见'); }
   function toggleBlindPeek() { state.blindPeek = !state.blindPeek; applyBlind(); savePrefs(); toast(state.blindPeek ? '盲听：悬停可看清一句' : '盲听：完全遮蔽，悬停不再显示'); }
   function toggleBlind() {
-    if (isMobileReader() && Touch.isAnnotating()) Touch.setAnnotating(false, true);
     state.blind = !state.blind;
     applyBlind(); savePrefs();
     toast(state.blind ? (isMobileReader() ? '已遮盖字幕 · 轻点句子揭开，再点盖回' : '盲听：字幕已隐藏（悬停可偷看，再按 B 恢复）') : (isMobileReader() ? '已取消遮盖' : '盲听关闭'));
@@ -830,7 +852,7 @@
     var ov = state.located.map(function (o, k) { if (k === ri) return null; var lo = Math.max(o.cues[0], p.cues[0]), hi = Math.min(o.cues[1], p.cues[1]); return hi >= lo ? '#' + state.locOrder[k] + ' 重叠 ' + (hi - lo + 1) + ' 句' : null; }).filter(Boolean);
     return '<div class="loc-head" id="loc-' + ri + '"><span class="loc-num">漏听 #' + n + '</span><span class="loc-label">' + esc(p.label || '段落') + '</span>' +
       '<span class="t">' + fmt(p.startTime) + '–' + fmt(p.endTime) + (p.sentences.length ? ' · ' + p.sentences.length + ' 关键句' : '') + (ov.length ? ' · 与 ' + ov.join('、') : '') + '</span>' +
-      '<button data-play="' + ri + '" title="跳转到本段，保持播放或暂停">↦ 定位</button><button data-loop="' + ri + '" title="循环本段">🔁 循环</button>' +
+      '<button data-play="' + ri + '" title="跳转到本段，保持播放或暂停">↦ 定位</button><button data-loop="' + ri + '" title="循环本段；再点停止">🔁 循环</button>' +
       '<span class="ops"><button data-edit="' + ri + '" title="编辑标签与起止时间">✎</button>' +
       (p.sentences.length === 0 && containingParagraph(p.cues, ri) >= 0 ? '<button data-attach="' + ri + '" title="归入包含它的段落，成为其关键句">归入上级</button>' : '') +
       '<button data-del="' + ri + '" title="删除本段（连同关键句）">✕</button></span></div>';
@@ -921,7 +943,7 @@
   }
   function blockHtml(node, ctx, depth) {
     var lp = state.located[node.ri], n = state.locOrder[node.ri];
-    var head = node.lo === lp.cues[0] ? locHead(node.ri) : '<div class="loc-cont">↳ 续 · 漏听 #' + n + ' ' + esc(lp.label || '') + '</div>';
+    var head = node.lo === lp.cues[0] ? locHead(node.ri) : '<div class="loc-cont">↳ 续 · 漏听 #' + n + ' ' + esc(lp.label || '') + '<span class="loc-loop" data-loop="' + node.ri + '" title="循环漏听 #' + n + ' 整段（含前面的部分）；再点停止">🔁</span></div>';
     var foot = node.hi === lp.cues[1] ? '<div class="loc-end">— 漏听 #' + n + ' 结束 —</div>' : '';
     return '<div class="loc-block depth-' + depth + (node.lo === lp.cues[0] ? '' : ' continued') + '" data-loc="' + node.ri + '">' + head + nodeHtml(node, ctx, depth + 1) + foot + '</div>';
   }
@@ -929,8 +951,7 @@
   function paraPieceHtml(p, cs, showSpk) {
     var chip = showSpk ? '<span class="spk spk-' + esc(p.speaker || 'Unknown') + '">' + esc(SPK_NAME[p.speaker] || p.speaker || '—') + '</span>' : '';
     return '<div class="para" data-speaker="' + esc(p.speaker || 'Unknown') + '" data-lo="' + p.cues[0] + '" data-hi="' + p.cues[1] + '">' +
-      '<span class="para-loop" data-lo="' + p.cues[0] + '" data-hi="' + p.cues[1] + '" title="循环这一小段（说话人的一轮，' + (p.cues[1] - p.cues[0] + 1) + ' 句）；再点停止。快捷键 Shift+L 循环/停止正在播放的小段">🔁</span>' +
-      '<p class="text">' + chip + cs.map(function (c, j) { return cueHtml(c, j === 0); }).join('') + '</p>' + zhParaHtml(cs) + '</div>';
+      '<p class="text">' + chip + '<span class="para-loop" data-lo="' + p.cues[0] + '" data-hi="' + p.cues[1] + '" title="循环这一小段（说话人的一轮，' + (p.cues[1] - p.cues[0] + 1) + ' 句）；再点停止。快捷键 Shift+L 循环/停止正在播放的小段">🔁</span>' + cs.map(function (c, j) { return cueHtml(c, j === 0); }).join('') + '</p>' + zhParaHtml(cs) + '</div>';
   }
   function render() {
     var main = $('main'), st = foldAsides(state.structure || autoStructure(state.cues)), html = '';
@@ -962,7 +983,7 @@
     state.zhEls = Object.create(null);
     main.querySelectorAll('.zhc[data-i]').forEach(function (el) { state.zhEls[el.dataset.i] = el; });
     paintReveals();
-    renderToc(st); renderLocList(); renderStats(); renderTimeline(); syncScrollPadding(); updateScrollSpy();
+    renderToc(st); renderLocList(); renderStats(); renderTimeline(); syncScrollPadding(); updateScrollSpy(); paintLoop();
     if (state.activeCue !== null) { var ae = document.getElementById('cue-' + state.activeCue); if (ae) ae.classList.add('active'); var az = document.querySelector('.zhc[data-i="' + state.activeCue + '"]'); if (az) az.classList.add('active'); }
     state.visRange = null; updateParaNow();
     state.sel.forEach(function (i) { var se = document.getElementById('cue-' + i); if (se) se.classList.add('sel'); });
@@ -1114,7 +1135,7 @@
     pop.querySelectorAll('[data-kact]').forEach(function (b) {
       b.onclick = function () {
         var act = b.dataset.kact; hidePopover();
-        if (act === 'loop') { localSeekGuard(); setLoop({ startTime: sn.startTime, endTime: sn.endTime, label: '句' + (si + 1) + (sn.label ? ' ' + sn.label : ''), cues: sn.cues }); }
+        if (act === 'loop') { localSeekGuard(); setLoop({ startTime: sn.startTime, endTime: sn.endTime, label: '关键句 句' + (si + 1) + (sn.label ? ' ' + sn.label : '') + ' · 漏听 #' + state.locOrder[pi], cues: sn.cues, key: [pi, si] }); }
         else if (act === 'play') { localSeekGuard(); setLoop(null); seekKeep(sn.startTime); }
         else if (act === 'label') { var l = prompt('关键句标签', sn.label || ''); if (l === null) return; sn.label = l; commit('已改标签'); }
         else if (act === 'promote') { state.located[pi].sentences.splice(si, 1); state.located.push({ label: sn.label, startTime: sn.startTime, endTime: sn.endTime, cues: sn.cues, sentences: [], createdAt: sn.createdAt || Date.now() }); commit('已提升为独立漏听段落'); }
@@ -1181,23 +1202,34 @@
     onTimeUpdate(); if (play) m.play().catch(function () { toast('请点播放器开始播放'); });
   }
   function setLoop(p) {
-    state.loop = p ? { start: p.startTime, end: p.endTime, label: p.label, cue: p.cue || null, para: p.para || null,
+    // 循环对象分四层：句（cue）/ 说话人一轮（para）/ 漏听段落（loc，存对象引用，增删后下标会变）/ 关键句（key）。
+    // 漏听段落的循环名带上编号，看得出循环的是哪一层、哪一段（2026-09-30 用户：#46 与 #47 部分重叠时分不清在循环哪个）
+    var li = p ? state.located.indexOf(p) : -1;
+    state.loop = p ? { start: p.startTime, end: p.endTime, label: li >= 0 ? '漏听 #' + state.locOrder[li] + ' · ' + (p.label || '段落') : p.label, cue: p.cue || null, para: p.para || null,
+                       loc: li >= 0 ? p : null, key: p.key || null,
                        range: p.cues || p.para || (p.cue ? [p.cue, p.cue] : null) } : null;   // range：盲听「当前段可见」的范围随循环对象走
     // 顶栏因循环行出现 / 消失而变高变矮时，正文在屏幕上不能动：Chrome 的 scroll anchoring 通常已自动补偿（在布局时同步完成），
     // 这里量一个参照句的位置，只补偿残差，避免和浏览器各补一次变成双倍（2026-09-28 实测）
     var ref = document.querySelector('.cue.active') || readingCue(), top0 = ref ? ref.getBoundingClientRect().top : null;
     $('loop-row').classList.toggle('hidden', !p);
     if (ref) { var d = ref.getBoundingClientRect().top - top0; if (Math.abs(d) > 1 && window.scrollY > 0) { window.scrollBy(0, d); } }
-    var was = document.querySelector('.cue.looping'); if (was) was.classList.remove('looping');
-    document.querySelectorAll('.para.looping').forEach(function (e) { e.classList.remove('looping'); });
+    paintLoop();
     if (p) {
-      $('lr-label').textContent = p.label || fmt(p.startTime); $('lr-label').title = p.label || '';
+      $('lr-label').textContent = state.loop.label || fmt(p.startTime); $('lr-label').title = state.loop.label || '';
       renderLoopTicks();
-      if (p.cue) { var el = document.getElementById('cue-' + p.cue); if (el) el.classList.add('looping'); }
-      if (p.para) document.querySelectorAll('.para[data-lo="' + p.para[0] + '"]').forEach(function (e) { e.classList.add('looping'); });
       seekKeep(p.startTime); updateLoopBar(p.startTime); rafLoopBar();
     }
     syncScrollPadding(); updateParaNow(); Touch.sync();
+  }
+  /** 循环对象在正文里的标识，各层标各层的：句、说话人一轮、漏听段落（它的每一块，含「续」块）、关键句标签。整页重渲染后要重画 */
+  function paintLoop() {
+    document.querySelectorAll('#main .looping').forEach(function (e) { e.classList.remove('looping'); });
+    var L = state.loop; if (!L) return;
+    var on = function (e) { e.classList.add('looping'); };
+    if (L.cue) { var el = document.getElementById('cue-' + L.cue); if (el) on(el); }
+    if (L.para) document.querySelectorAll('.para[data-lo="' + L.para[0] + '"]').forEach(on);
+    if (L.loc) { var li = state.located.indexOf(L.loc); if (li >= 0) document.querySelectorAll('.loc-block[data-loc="' + li + '"]').forEach(on); }
+    if (L.key) document.querySelectorAll('.key-tag[data-pi="' + L.key[0] + '"][data-si="' + L.key[1] + '"]').forEach(on);
   }
   /** 小段循环：结构段落（说话人的一轮）；toggle 时再点同一段 = 停止 */
   function loopPara(lo, hi, toggle) {
@@ -1489,7 +1521,7 @@
     var play = tg.closest('[data-play]');
     if (play) { localSeekGuard(); setLoop(null); seekKeep(state.located[+play.dataset.play].startTime); return; }
     var loop = tg.closest('[data-loop]');
-    if (loop) { localSeekGuard(); setLoop(state.located[+loop.dataset.loop]); return; }
+    if (loop) { var lq = state.located[+loop.dataset.loop]; if (state.loop && state.loop.loc === lq) { setLoop(null); toast('已停止循环'); } else { localSeekGuard(); setLoop(lq); } return; }
     var sa = tg.closest('[data-selact]'); if (sa) { selAction(sa.dataset.selact); return; }
     var ma = tg.closest('[data-markact]'); if (ma) { if (ma.dataset.markact === 'end') markToggle(); else cancelMark(); return; }
     if (state.selecting) {
@@ -1712,13 +1744,16 @@
 
   // ============================================================
   // 触屏壳：手机 / 平板。自己的顶栏、底栏、抽屉、情境条与菜单；核心只通过 Touch.* 钩子通知它，不搬运桌面控件。
-  // 手势词汇（阅读态 / 遮盖 / 标注态）见 design-review-2026-09-30.md §3.3：单击只在 click 处理，长按由 pointerdown 计时并吞掉随后那一次 click。
+  // 手势词汇（阅读态 / 遮盖 / 标注态）：正文只有轻点与滑动，单击只在 click 处理，不占用长按（句前 / 段前的时间与 🔁 常驻，标记并入顶栏「标注」）。
+  // 长按只剩底栏 🔁（选循环范围），由 pointerdown 计时并吞掉随后那一次 click。
   // ============================================================
   var Touch = (function () {
     var mounted = false, annotating = false, followSuspended = false, programmaticUntil = 0;
-    var press = null, swallowClick = false, swallowTimer = 0;
-    var range = null;      // 两点圈选 { a, b|null }
+    var target = 'word';   // 标注态的对象：word = 选词做词句标注；sent = 选句做漏听段落 / 关键句
+    var swallowClick = false, swallowTimer = 0;
+    var range = null;      // 选句（两点） { a, b|null }
     var pick = null;       // 选词 { cue, start, end, anchor: [s, e] }
+    var nativeSel = false; // 当前选词来自系统选区：那一句不能重渲染，否则选区被毁
     var seeking = false, popKind = null, barRO = null;
     var main = $('main'), bar = $('t-bar'), ctx = $('t-ctx'), pop = $('t-pop'), sheet = $('t-sheet'), pill = $('t-pill');
     var MODE_SHORT = { off: '英', cue: '英中', para: '英+段', only: '中' };
@@ -1734,8 +1769,8 @@
     }
     function unmount() {
       if (!mounted) return;
-      closeAll(); setAnnotating(false, true); clearRange(); clearPick(); followSuspended = false; pill.hidden = true;
-      mounted = false; document.body.classList.remove('touch-reader', 'annotating'); audio.controls = video.controls = true;
+      closeAll(); setAnnotating(false); followSuspended = false; pill.hidden = true;
+      mounted = false; document.body.classList.remove('touch-reader', 'annotating', 'edit-word', 'edit-sent'); audio.controls = video.controls = true;
       document.documentElement.style.removeProperty('--tbar');
     }
     function closeAll() { closePop(); closeSheet(); closeDrawer(); }
@@ -1743,7 +1778,7 @@
     // ---------- 命中：正文文字（含行内空隙）→ 所在句 ----------
     function textAt(target, x, y) {
       if (!target || !target.closest || !target.closest('#main')) return null;
-      if (target.closest('button, a, input, select, textarea, .key-tag, [data-fold], .loc-head, summary')) return null;
+      if (target.closest('button, a, input, select, textarea, .ts, .cue-loop, .para-loop, .key-tag, [data-fold], .loc-head, summary')) return null;
       var hit = target.closest('.cue, .zhc'); if (hit) return hit;
       var block = target.closest('.para, .zh-para'); if (!block || typeof x !== 'number') return null;
       var r = document.caretRangeFromPoint ? document.caretRangeFromPoint(x, y) : null, n = r && r.startContainer, el = n ? (n.nodeType === 3 ? n.parentElement : n) : null;
@@ -1751,48 +1786,32 @@
     }
     function cueIdOf(el) { return el ? +el.dataset.i : null; }
 
-    // ---------- 长按 = 上下文菜单 ----------
-    main.addEventListener('pointerdown', function (e) {
-      if (!mounted || !e.isPrimary || (e.pointerType === 'mouse' && e.button !== 0)) return;
-      var head = e.target.closest ? e.target.closest('.loc-head') : null, el = head ? null : textAt(e.target, e.clientX, e.clientY);
-      if (!head && !el) return;
-      cancelPress();
-      press = { x: e.clientX, y: e.clientY, el: el, head: head, id: cueIdOf(el) };
-      press.feedback = setTimeout(function () { if (press && press.el) press.el.classList.add('pressing'); }, 180);
-      press.timer = setTimeout(function () { var p = press; cancelPress(); longPress(p); }, 450);
-    }, { passive: true });
-    main.addEventListener('pointermove', function (e) { if (press && Math.hypot(e.clientX - press.x, e.clientY - press.y) > 8) cancelPress(); }, { passive: true });
-    main.addEventListener('pointerup', cancelPress, { passive: true });
-    main.addEventListener('pointercancel', cancelPress, { passive: true });
+    // ---------- 长按只剩底栏 🔁 ----------
     // 长按已经开出菜单后，手指抬起时浏览器仍会合成一次 click（可能落在刚打开的菜单上）：在 document 捕获阶段吞掉这一次，不管它落在哪
     document.addEventListener('pointerup', function () { if (swallowClick) { clearTimeout(swallowTimer); swallowTimer = setTimeout(function () { swallowClick = false; }, 500); } }, { capture: true, passive: true });
     document.addEventListener('pointercancel', function () { swallowClick = false; }, { capture: true, passive: true });
     document.addEventListener('click', function (e) { if (!swallowClick) return; swallowClick = false; clearTimeout(swallowTimer); e.stopPropagation(); e.preventDefault(); }, true);
     main.addEventListener('contextmenu', function (e) { if (mounted) e.preventDefault(); });
-    function cancelPress() { if (!press) return; clearTimeout(press.timer); clearTimeout(press.feedback); if (press.el) press.el.classList.remove('pressing'); press = null; }
-    function longPress(p) {
-      if (!p) return; swallowClick = true;
-      if (p.head) { locSheet(+p.head.closest('.loc-block').dataset.loc); return; }
-      if (p.id !== null && state.cueById[p.id]) cueSheet(p.id);
-    }
 
     // ---------- 单击（capture：先于文档级处理器；只拦正文文字、标注、区块标题栏，控件放行） ----------
     main.addEventListener('click', function (e) {
       if (!mounted) return;
       var tg = e.target instanceof Element ? e.target : null; if (!tg) return;
+      // 句前 / 段前的时间与 🔁 交给核心的文档级处理器（定位 / 循环，保持播放状态）；点时间算定位动作，恢复跟随
+      if (tg.closest('.ts, .cue-loop, .para-loop')) { if (tg.closest('.ts')) resumeFollow(); return; }
       var head = tg.closest('.loc-head');
       if (head && !tg.closest('button, input')) { e.stopPropagation(); e.preventDefault(); locSheet(+head.closest('.loc-block').dataset.loc); return; }
       var mark = tg.closest('mark.hl'), el = textAt(tg, e.clientX, e.clientY);
       if (!el) return;
       e.stopPropagation(); e.preventDefault();
       var id = cueIdOf(el);
-      if (mark && !(state.blind && !annotating && !state.revealed.has(id))) { var h = state.highlights[mark.dataset.id]; if (h) { highlightSheet(h); return; } }
+      var word = annotating && target === 'word', covered = state.blind && !word && !state.revealed.has(id);
+      if (mark && !covered && !(annotating && target === 'sent')) { var h = state.highlights[mark.dataset.id]; if (h) { highlightSheet(h); return; } }
       onTap(e, el, id);
     }, true);
     function onTap(e, el, id) {
       var c = state.cueById[id]; if (!c) return;
-      if (annotating) { pickWordAt(e, el, id); return; }
-      if (range) { setRangeEnd(id); return; }
+      if (annotating) { if (target === 'word') pickWordAt(e, el, id); else if (!range) startRange(id); else setRangeEnd(id); return; }
       if (state.blind) { toggleRevealAt(id); return; }
       localSeekGuard(); resumeFollow(); seekKeep(c.s);
     }
@@ -1832,7 +1851,7 @@
     main.addEventListener('touchstart', function (e) {
       hswipe = null; if (!mounted || e.touches.length !== 1) return;
       var t = e.touches[0], tg = e.target;
-      if (t.clientX < 24 || t.clientX > innerWidth - 24 || (tg.closest && tg.closest('button, a, input, select, textarea, summary'))) return;
+      if (t.clientX < 24 || t.clientX > innerWidth - 24 || (tg.closest && tg.closest('button, a:not(.ts), input, select, textarea, summary'))) return;   // 句前时间 / 🔁 遍布正文，从它们上面起手也算轻扫
       hswipe = { x: t.clientX, y: t.clientY, lx: t.clientX, ly: t.clientY, t: Date.now(), dead: false };
     }, { passive: true });
     main.addEventListener('touchmove', function (e) {
@@ -1888,7 +1907,7 @@
       var seg = function (attr, items, cur) { return '<div class="seg">' + items.map(function (it) { return '<button type="button" data-' + attr + '="' + it[0] + '"' + (it[0] === cur ? ' class="active"' : '') + (it[2] ? ' disabled' : '') + '>' + it[1] + '</button>'; }).join('') + '</div>'; };
       pop.innerHTML = '<div class="t-row" style="margin-top:0"><span>显示</span><span class="hint">左右轻扫正文 ⇄ ' + MODE_NAME[flipTarget()] + '</span></div>' +
         seg('mode', [['off', '英文'], ['cue', '逐句对照'], ['para', '段末对照'], ['only', '中文']], state.zhMode) +
-        '<div class="t-row"><span>遮盖字幕 <span class="hint">' + (annotating ? '· 标注时暂不遮盖，完成后恢复' : '· 轻点句子揭开 / 盖回') + '</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
+        '<div class="t-row"><span>遮盖字幕 <span class="hint">' + (annotating && target === 'word' ? '· 选词时暂不遮盖，完成后恢复' : '· 轻点句子揭开 / 盖回') + '</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
         '<div class="t-row"><span>轻点范围</span>' + seg('scope', [['cue', '一句', !state.blind], ['para', '一段', !state.blind]], state.coverScope) + '</div>' +
         '<div class="t-row"><span class="hint">一段 = 说话人的一轮</span><span><button type="button" class="mini" id="t-revealall"' + (state.blind ? '' : ' disabled') + '>全部揭开</button> <button type="button" class="mini" id="t-coverall"' + (state.blind ? '' : ' disabled') + '>全部盖上</button></span></div>';
       pop.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () { setZhMode(b.dataset.mode); renderPop(); }; });
@@ -1910,16 +1929,18 @@
     function syncDrawerFoot() { $('t-tocseek').setAttribute('aria-checked', String(!!state.link.ps.b)); }
 
     // ---------- 顶栏：标注 / 更多 ----------
-    $('t-annotate').onclick = function () { setAnnotating(!annotating); };
+    $('t-annotate').onclick = function () { setAnnotating(!annotating); };   // 「标注」⇄「完成」
     $('t-more').onclick = function () { moreSheet(); };
-    function setAnnotating(on, silent) {
-      on = !!on; if (on === annotating && !silent) return;
-      // 仅中文显示时标注态临时露出英文，正文高度翻倍：进出都要把正在读的那句钉在原位，
-      // 否则进入时跳回前文、找回位置后退出又被夹到文末（Safari 没有滚动锚定；2026-09-30 用户反馈）
-      annotating = on; withScrollAnchor(function () { document.body.classList.toggle('annotating', on); });
+    /** 标注态：tgt 指定对象（word / sent），不给则沿用上次的。选词会临时改显示（露出英文、遮盖不生效），进出与换对象都钉住阅读位置 */
+    function setAnnotating(on, tgt) {
+      on = !!on; if (tgt !== 'word' && tgt !== 'sent') tgt = target;
+      if (on === annotating && tgt === target) return;
       clearPick(); clearRange(); closePop(); closeDrawer();
-      sync();
-      if (!silent) toast(on ? '标注：轻点一个词；再点同句里的末词可选短语' : state.blind ? '已退出标注 · 遮盖恢复' : '已退出标注');
+      annotating = on; target = tgt;
+      // 仅中文显示时选词临时露出英文，正文高度翻倍：把正在读的那句钉在原位，
+      // 否则进入时跳回前文、找回位置后退出又被夹到文末（Safari 没有滚动锚定；2026-09-30 用户反馈）
+      withScrollAnchor(function () { var b = document.body.classList; b.toggle('annotating', on); b.toggle('edit-word', on && target === 'word'); b.toggle('edit-sent', on && target === 'sent'); });
+      sync(); renderCtx();
     }
 
     // ---------- 选词（标注态）：caretRangeFromPoint 取字符偏移 → 词边界；同句第二次轻点扩成短语 ----------
@@ -1941,20 +1962,50 @@
       var en = el.querySelector('.en'), c = state.cueById[id]; if (!en) return;
       var off = offsetIn(en, e.clientX, e.clientY); if (off === null) return;
       var tok = tokenAt(c.en, off); if (!tok) return;
-      var next = pick && pick.cue === id ? { cue: id, start: Math.min(pick.anchor[0], tok[0]), end: Math.max(pick.anchor[1], tok[1]), anchor: pick.anchor } : { cue: id, start: tok[0], end: tok[1], anchor: tok };
+      // 同句再点：点在选区外 = 向那边扩（可以一路往两头加词）；点在选区内 = 收回到「起词 – 这个词」。
+      // 原先每次都从起词重算，选了 that regard 再点 in 会变成 in that，选不出 in that regard（2026-09-30 用户）
+      var next = !(pick && pick.cue === id) ? { cue: id, start: tok[0], end: tok[1], anchor: tok }
+        : (tok[0] < pick.start || tok[1] > pick.end) ? { cue: id, start: Math.min(pick.start, tok[0]), end: Math.max(pick.end, tok[1]), anchor: pick.anchor }
+        : { cue: id, start: Math.min(pick.anchor[0], tok[0]), end: Math.max(pick.anchor[1], tok[1]), anchor: pick.anchor };
+      if (nativeSel) { nativeSel = false; var ws = window.getSelection(); if (ws) ws.removeAllRanges(); }
       if (highlightsOf(id).some(function (h) { return h.start < next.end && next.start < h.end; })) { toast('与已有标注重叠：点那条标注可修改或删除'); return; }
       var prev = pick; pick = next; state.picking = { cue: id, start: pick.start, end: pick.end };
       if (prev && prev.cue !== id) rerenderCue(prev.cue);
       rerenderCue(id); renderCtx();
     }
-    function clearPick() { if (!pick) return; var c = pick.cue; pick = null; state.picking = null; rerenderCue(c); renderCtx(); }
+    function clearPick() { if (!pick) return; var c = pick.cue; pick = null; state.picking = null; if (nativeSel) { nativeSel = false; var ws = window.getSelection(); if (ws) ws.removeAllRanges(); } rerenderCue(c); renderCtx(); }
     function savePick(kind, note) {
       if (!pick) return; var c = state.cueById[pick.cue], sel = { cue: pick.cue, start: pick.start, end: pick.end, text: c.en.slice(pick.start, pick.end) };
+      if (highlightsOf(sel.cue).some(function (h) { return h.start < sel.end && sel.start < h.end; })) { toast('与已有标注重叠：点那条标注可修改或删除'); return; }
       clearPick(); addHighlight(sel, kind, note || '');
     }
+    // 系统选区 → 选词：选词态里长按、拖动两端选出的范围原样接过来（不吸附到词边界）；跨到下一句的部分截掉。
+    // 选区还在时不重渲染那一句；选区消失（点了别处 / 按钮）后改用页面自己的标记把它画出来，选中的内容不丢
+    function mirrorSelection() {
+      if (!mounted || !annotating || target !== 'word') return;
+      var ws = window.getSelection();
+      if (!ws || ws.isCollapsed || !ws.rangeCount) {
+        if (nativeSel) { nativeSel = false; if (pick) { state.picking = { cue: pick.cue, start: pick.start, end: pick.end }; rerenderCue(pick.cue); } }
+        return;
+      }
+      var r = ws.getRangeAt(0), a = closestEn(r.startContainer); if (!a || !main.contains(a)) return;
+      var clip = r.cloneRange(); if (!a.contains(r.endContainer)) clip.setEnd(a, a.childNodes.length);
+      var pre = document.createRange(); pre.selectNodeContents(a); pre.setEnd(clip.startContainer, clip.startOffset);
+      var text = clip.toString(), start = pre.toString().length, end = start + text.length;
+      start += text.length - text.replace(/^\s+/, '').length; end -= text.length - text.replace(/\s+$/, '').length;
+      if (end <= start) return;
+      var id = +a.closest('.cue').dataset.i, prev = pick;
+      state.picking = null;
+      if (prev && prev.cue !== id) rerenderCue(prev.cue);
+      a.querySelectorAll('mark.picking').forEach(function (m) { m.classList.remove('picking'); });
+      pick = { cue: id, start: start, end: end, anchor: [start, end] }; nativeSel = true;
+      renderCtx();
+    }
+    var selTimer = 0;
+    document.addEventListener('selectionchange', function () { if (!mounted || !annotating) return; clearTimeout(selTimer); selTimer = setTimeout(mirrorSelection, 120); });
 
-    // ---------- 两点圈选：起点句 → 终点句；页面全程可滚动 ----------
-    function startRange(id) { clearRange(); setAnnotating(false, true); range = { a: id, b: null }; paintRange(); renderCtx(); toast('起点已选：轻点终点句'); }
+    // ---------- 选句（标注态 · 句）：起点句 → 终点句；页面全程可滚动。只选一句也可以保存 ----------
+    function startRange(id) { range = { a: id, b: null }; paintRange(); renderCtx(); }
     function setRangeEnd(id) {
       if (!range) return;
       if (range.b === null) range.b = id; else if (id < range.a) range.a = id; else range.b = id;
@@ -1968,12 +2019,6 @@
       for (var n = r[0]; n <= r[1]; n++) { var el = document.getElementById('cue-' + n); if (el) el.classList.add('in-range'); var z = state.zhEls && state.zhEls[n]; if (z) z.classList.add('in-range'); }
     }
     function clearRange() { if (!range) return; range = null; paintRange(); renderCtx(); }
-    function markKey(r) {
-      var pi = containingParagraph(r, -1);
-      if (pi >= 0) { addSentence(pi, r, ''); return; }
-      form('保存关键句', '<p>所选句子不在任何漏听段落内。将同时建立覆盖它的漏听段落，并把它保存为关键句。</p><label>段落标签（可选）<input id="f-label" placeholder="便于回顾的名字"></label>',
-        [['建段并保存', function () { var tm = cueTimes(r), label = $('f-label').value.trim(); state.located.push({ label: label || '段落 ' + fmt(tm.startTime), startTime: tm.startTime, endTime: tm.endTime, cues: r.slice(), sentences: [], createdAt: Date.now() }); addSentence(state.located.length - 1, r, ''); }]]);
-    }
     function saveRange(kind) {
       var r = rangeArr(); if (!r) return;
       var c0 = state.cueById[r[0]], c1 = state.cueById[r[1]], n = r[1] - r[0] + 1, pi = kind === 'sent' ? containingParagraph(r, -1) : -1, needParent = kind === 'sent' && pi < 0;
@@ -1986,28 +2031,36 @@
           addSentence(pi, r, label);
         }]], '返回选区');
     }
-    function endAtPlayhead() { var c = findCue(mediaEl().currentTime); if (!c) { toast('播放位置没有字幕句'); return; } setRangeEnd(c.i); }
+    function atPlayhead() { var c = findCue(mediaEl().currentTime); if (!c) { toast('播放位置没有字幕句'); return; } if (range) setRangeEnd(c.i); else startRange(c.i); }
+    function copyRange() { var r = rangeArr(), out = []; for (var n = r[0]; n <= r[1]; n++) if (state.cueById[n]) out.push(state.cueById[n].en); navigator.clipboard.writeText(out.join(' ')).then(function () { toast('已复制 ' + out.length + ' 句英文'); }, function () { toast('复制失败'); }); }
 
-    // ---------- 情境条（圈选 / 选词二选一） ----------
+    // ---------- 情境条：标注态常驻。首行 = 对象切换（词 / 句）+ 提示或已选内容；有选区后第二行出动作 ----------
     function renderCtx() {
-      if (!mounted || (!range && !pick)) { ctx.hidden = true; ctx.innerHTML = ''; measureBar(); return; }
+      if (!mounted || !annotating) { ctx.hidden = true; ctx.innerHTML = ''; measureBar(); return; }
       ctx.hidden = false;
-      if (pick) {
-        var c = state.cueById[pick.cue];
-        ctx.innerHTML = '<span class="txt">已选 <b>' + esc(c.en.slice(pick.start, pick.end)) + '</b> · 再点同句末词可扩成短语</span>' +
-          '<button type="button" class="b-vocab" data-kind="vocab">生词</button><button type="button" class="b-colloc" data-kind="collocation">搭配 / 语法</button><button type="button" class="b-q" data-kind="question">疑问</button><button type="button" data-act="x">✕</button>';
+      var seg = '<div class="seg" role="tablist" aria-label="标注对象"><button type="button" data-t="word"' + (target === 'word' ? ' class="active"' : '') + '>词</button><button type="button" data-t="sent"' + (target === 'sent' ? ' class="active"' : '') + '>句</button></div>';
+      if (target === 'word') {
+        var c = pick ? state.cueById[pick.cue] : null;
+        ctx.innerHTML = seg + '<span class="txt">' + (pick ? '已选 <b>' + esc(c.en.slice(pick.start, pick.end)) + '</b>' : '轻点选词，再点扩展；或长按拖选') + '</span>' +
+          (pick ? '<span class="brk"></span><button type="button" class="b-vocab" data-kind="vocab">生词</button><button type="button" class="b-colloc" data-kind="collocation">搭配 / 语法</button><button type="button" class="b-q" data-kind="question">疑问</button><button type="button" data-act="x">✕</button>' : '');
         ctx.querySelectorAll('[data-kind]').forEach(function (b) { b.onclick = function () { var k = b.dataset.kind; if (k !== 'question') { savePick(k, ''); return; }
           form('记录疑问', '<p class="q">“' + esc(c.en.slice(pick.start, pick.end)) + '”</p><label>问题<input id="f-note" placeholder="写下想弄懂的问题"></label>', [['保存疑问', function () { var note = $('f-note').value.trim(); if (!note) { toast('请先写下问题'); return false; } savePick('question', note); }]]); }; });
-        ctx.querySelector('[data-act="x"]').onclick = clearPick;
+        if (pick) ctx.querySelector('[data-act="x"]').onclick = clearPick;
       } else {
-        var r = rangeArr(), a = state.cueById[r[0]], b = state.cueById[r[1]];
-        ctx.innerHTML = '<span class="txt">' + (range.b === null ? '起点 <b>' + fmt(a.s) + '</b> · 轻点终点句（或播放到终点后按下方按钮）' : '<b>' + fmt(a.s) + '–' + fmt(b.e) + '</b> · ' + (r[1] - r[0] + 1) + ' 句 · 再点别的句子可调整') + '</span>' +
-          '<button type="button" data-act="para"' + (range.b === null ? ' disabled' : '') + '>漏听段落</button><button type="button" data-act="sent"' + (range.b === null ? ' disabled' : '') + '>关键句</button><button type="button" data-act="head">终点 = 播放处</button><button type="button" data-act="x">取消</button>';
-        ctx.querySelector('[data-act="para"]').onclick = function () { saveRange('para'); };
-        ctx.querySelector('[data-act="sent"]').onclick = function () { saveRange('sent'); };
-        ctx.querySelector('[data-act="head"]').onclick = endAtPlayhead;
-        ctx.querySelector('[data-act="x"]').onclick = clearRange;
+        var r = rangeArr(), a = r && state.cueById[r[0]], b = r && state.cueById[r[1]];
+        // 没选时只占一行（对象切换 + 提示 + 「从播放处」）；选了起点后第二行出动作
+        ctx.innerHTML = seg + '<span class="txt">' + (!r ? '轻点起点句，再点终点句' : '<b>' + fmt(a.s) + '–' + fmt(b.e) + '</b> · ' + (r[1] - r[0] + 1) + ' 句' + (range.b === null ? ' · 再点终点句可延长' : ' · 再点可调整')) + '</span>' +
+          (r ? '<span class="brk"></span><button type="button" data-act="para">漏听段落</button><button type="button" data-act="sent">关键句</button><button type="button" data-act="copy">复制</button><button type="button" data-act="head">到播放处</button><button type="button" data-act="x">✕</button>'
+             : '<button type="button" class="mini" data-act="head">从播放处</button>');
+        ctx.querySelector('[data-act="head"]').onclick = atPlayhead;
+        if (r) {
+          ctx.querySelector('[data-act="para"]').onclick = function () { saveRange('para'); };
+          ctx.querySelector('[data-act="sent"]').onclick = function () { saveRange('sent'); };
+          ctx.querySelector('[data-act="copy"]').onclick = copyRange;
+          ctx.querySelector('[data-act="x"]').onclick = clearRange;
+        }
       }
+      ctx.querySelectorAll('[data-t]').forEach(function (b) { b.onclick = function () { setAnnotating(true, b.dataset.t); }; });
       measureBar();
     }
 
@@ -2035,19 +2088,6 @@
       openSheet();
       var first = sheet.querySelector('input'); if (first) setTimeout(function () { first.focus({ preventScroll: true }); }, 50);
     }
-    function cueSheet(id) {
-      var c = state.cueById[id], el = document.getElementById('cue-' + id), para = el && el.closest('.para'), pi = locAt(id), items = [];
-      items.push(['▶ 从这句播放', function () { localSeekGuard(); resumeFollow(); seekKeep(c.s); }]);
-      items.push(['🔁 循环这句', function () { localSeekGuard(); loopCue(id); }]);
-      if (para) items.push(['🔁 循环这一段', function () { localSeekGuard(); loopPara(+para.dataset.lo, +para.dataset.hi); }, { sub: (SPK_NAME[para.dataset.speaker] || para.dataset.speaker) + ' 的一轮 · ' + (+para.dataset.hi - +para.dataset.lo + 1) + ' 句' }]);
-      if (pi >= 0) items.push(['🔁 循环漏听 #' + state.locOrder[pi], function () { localSeekGuard(); setLoop(state.located[pi]); }, { sub: esc(state.located[pi].label || '') }]);
-      if (state.blind && !annotating && para) { var lo = +para.dataset.lo, hi = +para.dataset.hi, shown = state.revealed.has(id); items.push([shown ? '盖上这一段' : '揭开这一段', function () { setRevealed([lo, hi], !shown); }]); }
-      items.push(['★ 标记为关键句', function () { markKey([id, id]); }, { sub: pi >= 0 ? '归入漏听 #' + state.locOrder[pi] : '尚无所属段落，将一并建段' }]);
-      items.push(['⟷ 从这句圈段…', function () { startRange(id); }, { sub: '再轻点终点句，保存为漏听段落或关键句' }]);
-      if (pi >= 0) items.push(['编辑漏听 #' + state.locOrder[pi] + '…', function () { locSheet(pi); }]);
-      items.push(['复制英文', function () { navigator.clipboard.writeText(c.en).then(function () { toast('已复制'); }, function () { toast('复制失败'); }); }]);
-      menu(fmt(c.s) + ' · ' + esc(c.en), items);
-    }
     function loopSheet() {
       var id = state.activeCue, el = id !== null ? document.getElementById('cue-' + id) : null, para = el && el.closest('.para'), pi = locAt(id), items = [];
       if (id !== null) items.push(['循环当前句', function () { localSeekGuard(); loopCue(id); }, { sub: esc(state.cueById[id].en) }]);
@@ -2073,7 +2113,7 @@
     }
     function keySheet(pi, si) {
       var sn = state.located[pi].sentences[si], items = [];
-      items.push(['🔁 循环本句', function () { localSeekGuard(); setLoop({ startTime: sn.startTime, endTime: sn.endTime, label: '句' + (si + 1) + (sn.label ? ' ' + sn.label : ''), cues: sn.cues }); }]);
+      items.push(['🔁 循环本句', function () { localSeekGuard(); setLoop({ startTime: sn.startTime, endTime: sn.endTime, label: '关键句 句' + (si + 1) + (sn.label ? ' ' + sn.label : '') + ' · 漏听 #' + state.locOrder[pi], cues: sn.cues, key: [pi, si] }); }]);
       items.push(['↦ 定位', function () { localSeekGuard(); setLoop(null); resumeFollow(); seekKeep(sn.startTime); }]);
       items.push(['✎ 改标签', function () { form('关键句标签', '<label>标签<input id="f-label" value="' + esc(sn.label || '') + '"></label>', [['保存', function () { sn.label = $('f-label').value.trim(); commit('已改标签'); }]]); }]);
       items.push(['⤴ 提升为独立漏听段落', function () { state.located[pi].sentences.splice(si, 1); state.located.push({ label: sn.label, startTime: sn.startTime, endTime: sn.endTime, cues: sn.cues, sentences: [], createdAt: sn.createdAt || Date.now() }); commit('已提升为独立漏听段落'); }]);
@@ -2093,7 +2133,6 @@
       var hs = Object.keys(state.highlights).length, hasVideo = document.body.classList.contains('has-video');
       sheet.innerHTML = '<h3>' + esc($('title').textContent) + '</h3>' +
         '<div class="grp">段落标记（听力层 · segments.json）</div><div class="items">' +
-        '<button type="button" data-a="range">按播放位置圈段<small>起点 = 当前播放处；播放到终点后按情境条里的「终点 = 播放处」</small></button>' +
         '<button type="button" data-a="exp-seg">导出 segments.json<small>' + state.located.length + ' 段</small></button>' +
         '<button type="button" data-a="imp-seg">导入 segments.json<small>替换当前全部段落标记</small></button>' +
         '<button type="button" data-a="reset-seg">重置为文件版<small>丢弃本机对段落标记的编辑</small></button></div>' +
@@ -2103,10 +2142,9 @@
         '<button type="button" data-a="imp-hl">导入 highlights.json</button>' +
         '<button type="button" data-a="clear-hl" class="del">清空本篇全部标注</button></div>' +
         (hasVideo ? '<div class="grp">视频</div><div class="items"><button type="button" data-a="vhide">' + (state.videoHidden ? '展开画面' : '收起画面，只听声音') + '</button><button type="button" data-a="vsub">画面字幕：' + (state.videoSub ? '开' : '关') + '</button><button type="button" data-a="vmask">蒙版：' + (state.mask.on ? '开' : '关') + '</button></div>' : '') +
-        '<div class="grp">关于</div><p class="about">' + state.cues.length + ' 句 · 标注与标记按本机自动保存<br>轻点句子：定位播放；遮盖时揭开 / 盖回；标注时选词<br>长按句子：更多操作 · 长按 🔁：选循环范围<br>左右轻扫正文：在最近用的两种显示方式间快切（Aa 里设置）<br>手动滚动会暂停跟随，点「回到当前句」恢复</p>' +
+        '<div class="grp">关于</div><p class="about">' + state.cues.length + ' 句 · 标注与标记按本机自动保存<br>轻点句子：定位播放；遮盖时揭开 / 盖回<br>句前的时间：定位 · 句前 / 段前的 🔁：循环这句 / 这段，再点停止<br>顶栏「标注」：选词做生词 / 搭配 / 疑问，选句做漏听段落 / 关键句<br>长按底栏 🔁：选循环范围<br>左右轻扫正文：在最近用的两种显示方式间快切（Aa 里设置）<br>手动滚动会暂停跟随，点「回到当前句」恢复</p>' +
         '<button type="button" class="cancel">关闭</button>';
       var acts = {
-        range: function () { var c = findCue(mediaEl().currentTime); if (!c) { toast('先播放到某一句'); return; } startRange(c.i); },
         'exp-seg': exportSegments, 'imp-seg': function () { $('seg-file').click(); }, 'reset-seg': resetLocated,
         copy: function () { var t = passagesText(); if (!t) { toast('还没有标注'); return; } navigator.clipboard.writeText(t).then(function () { toast('已复制标注文本'); }, function () { toast('复制失败'); }); },
         'exp-hl': function () { download((state.data.slug || 'transcript') + '.highlights.json', JSON.stringify(exportData(), null, 2)); toast('已导出 .highlights.json'); },
@@ -2147,7 +2185,7 @@
              bottomInset: function () { return mounted ? bar.offsetHeight + (ctx.hidden ? 0 : ctx.offsetHeight + 8) : 0; },
              markProgrammatic: function () { programmaticUntil = Date.now() + 900; },
              resumeFollow: resumeFollow, onCueChange: updatePill, isAnnotating: function () { return annotating; },
-             debug: function () { return { mounted: mounted, annotating: annotating, followSuspended: followSuspended, programmaticUntil: programmaticUntil, range: range, pick: pick, popKind: popKind, sheetOpen: sheet.open }; } };
+             debug: function () { return { mounted: mounted, annotating: annotating, target: target, followSuspended: followSuspended, programmaticUntil: programmaticUntil, range: range, pick: pick, popKind: popKind, sheetOpen: sheet.open }; } };
   })();
 
   // ---------- 启动 ----------
