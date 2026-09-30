@@ -1,0 +1,6 @@
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+/release.json
+  Cache-Control: no-store
+/reader-shell-*.bin
+  Content-Type: application/octet-stream
