@@ -431,7 +431,7 @@
 #install-help p { margin: 4px 0; }
 @media(max-width:760px), (hover:none) and (pointer:coarse) { .offline-panel { margin: 10px 12px 0; } }
 </style>
-<meta name="app-build" content="8ef65a72b2d0">
+<meta name="app-build" content="788be7dd5ec7">
 </head>
 <body class="show-zh-para">
 <header>
@@ -539,7 +539,7 @@
     <button id="t-play" type="button" aria-label="播放"><svg viewBox="0 0 24 24" aria-hidden="true"><path class="play-shape" d="M8 5 19 12 8 19Z"/><g class="pause-shape"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></g></svg></button>
     <button id="t-next" type="button" aria-label="下一句"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M16 5h2v14h-2zM4 5v14l11-7z"/></svg></button>
     <button id="t-loop" type="button" aria-label="循环当前句；长按选择循环范围"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 3l4 4-4 4V8H7a3 3 0 0 0-3 3v2H2v-2a5 5 0 0 1 5-5h10V3zM7 21l-4-4 4-4v3h10a3 3 0 0 0 3-3v-2h2v2a5 5 0 0 1-5 5H7v3z"/></svg></button>
-    <button id="t-mode" type="button" aria-label="显示方式：轻点切换，长按设置">Aa</button>
+    <button id="t-mode" type="button" aria-label="显示方式与遮盖">Aa</button>
     <button id="t-rate" type="button" aria-label="播放速度">1×</button>
   </div>
 </div>
@@ -1815,15 +1815,11 @@
       localSeekGuard(); loopCue(state.activeCue);
     };
     $('t-loopstop').onclick = function () { setLoop(null); };
-    // Aa：轻点 = 快切（当前 ⇄ 上一次的显示方式，同桌面 ⇄ / 快捷键 C），长按 = 显示 / 遮盖面板；正文左右轻扫 = 同轻点
+    $('t-mode').onclick = function () { togglePop('mode'); };
+    $('t-rate').onclick = function () { togglePop('rate'); };
+    // 正文左右轻扫 = 快切显示方式（当前 ⇄ 上一次用的，同桌面 ⇄ / 快捷键 C）。用 touch 事件识别：竖向滚动交给浏览器后 pointer 事件会被 cancel，touch 事件不会；离屏幕左右边缘 24 px 内起手的让给系统返回手势
     function flipTarget() { return state.zhPrev !== state.zhMode && MODE_NAME[state.zhPrev] ? state.zhPrev : (state.zhMode === 'off' ? 'cue' : 'off'); }
     function quickFlip() { setZhMode(flipTarget()); toast('显示：' + MODE_NAME[state.zhMode] + '（再切：' + MODE_NAME[state.zhPrev] + '）'); }
-    var modePress = 0;
-    $('t-mode').addEventListener('pointerdown', function () { clearTimeout(modePress); modePress = setTimeout(function () { swallowClick = true; togglePop('mode'); }, 450); });
-    ['pointerup', 'pointercancel', 'pointerleave'].forEach(function (n) { $('t-mode').addEventListener(n, function () { clearTimeout(modePress); }); });
-    $('t-mode').onclick = function () { if (!pop.hidden) { var wasMode = popKind === 'mode'; closePop(); if (wasMode) return; } quickFlip(); };
-    $('t-rate').onclick = function () { togglePop('rate'); };
-    // 正文左右轻扫（touch 事件：竖向滚动交给浏览器后 pointer 事件会被 cancel，touch 事件不会）：离屏幕左右边缘 24 px 内起手的让给系统返回手势
     var hswipe = null;
     main.addEventListener('touchstart', function (e) {
       hswipe = null; if (!mounted || e.touches.length !== 1) return;
@@ -1882,7 +1878,7 @@
         return;
       }
       var seg = function (attr, items, cur) { return '<div class="seg">' + items.map(function (it) { return '<button type="button" data-' + attr + '="' + it[0] + '"' + (it[0] === cur ? ' class="active"' : '') + (it[2] ? ' disabled' : '') + '>' + it[1] + '</button>'; }).join('') + '</div>'; };
-      pop.innerHTML = '<div class="t-row" style="margin-top:0"><span>显示</span><span class="hint">轻点 Aa / 左右轻扫正文 ⇄ ' + MODE_NAME[flipTarget()] + '</span></div>' +
+      pop.innerHTML = '<div class="t-row" style="margin-top:0"><span>显示</span><span class="hint">左右轻扫正文 ⇄ ' + MODE_NAME[flipTarget()] + '</span></div>' +
         seg('mode', [['off', '英文'], ['cue', '逐句对照'], ['para', '段末对照'], ['only', '中文']], state.zhMode) +
         '<div class="t-row"><span>遮盖字幕 <span class="hint">· 轻点句子揭开 / 盖回</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
         '<div class="t-row"><span>轻点范围</span>' + seg('scope', [['cue', '一句', !state.blind], ['para', '一段', !state.blind]], state.coverScope) + '</div>' +
@@ -2086,7 +2082,6 @@
       closePop(); closeDrawer();
       var hs = Object.keys(state.highlights).length, hasVideo = document.body.classList.contains('has-video');
       sheet.innerHTML = '<h3>' + esc($('title').textContent) + '</h3>' +
-        '<div class="grp">显示</div><div class="items"><button type="button" data-a="display">显示方式与遮盖…<small>当前：' + MODE_NAME[state.zhMode] + (state.blind ? ' · 遮盖开' : '') + '；也可长按底栏 Aa</small></button></div>' +
         '<div class="grp">段落标记（听力层 · segments.json）</div><div class="items">' +
         '<button type="button" data-a="range">按播放位置圈段<small>起点 = 当前播放处；播放到终点后按情境条里的「终点 = 播放处」</small></button>' +
         '<button type="button" data-a="exp-seg">导出 segments.json<small>' + state.located.length + ' 段</small></button>' +
@@ -2098,10 +2093,9 @@
         '<button type="button" data-a="imp-hl">导入 highlights.json</button>' +
         '<button type="button" data-a="clear-hl" class="del">清空本篇全部标注</button></div>' +
         (hasVideo ? '<div class="grp">视频</div><div class="items"><button type="button" data-a="vhide">' + (state.videoHidden ? '展开画面' : '收起画面，只听声音') + '</button><button type="button" data-a="vsub">画面字幕：' + (state.videoSub ? '开' : '关') + '</button><button type="button" data-a="vmask">蒙版：' + (state.mask.on ? '开' : '关') + '</button></div>' : '') +
-        '<div class="grp">关于</div><p class="about">' + state.cues.length + ' 句 · 标注与标记按本机自动保存<br>轻点句子：定位播放；遮盖时揭开 / 盖回；标注时选词<br>长按句子：更多操作 · 长按 🔁：选循环范围<br>轻点 Aa 或左右轻扫正文：在最近用的两种显示方式间快切 · 长按 Aa：显示 / 遮盖设置<br>手动滚动会暂停跟随，点「回到当前句」恢复</p>' +
+        '<div class="grp">关于</div><p class="about">' + state.cues.length + ' 句 · 标注与标记按本机自动保存<br>轻点句子：定位播放；遮盖时揭开 / 盖回；标注时选词<br>长按句子：更多操作 · 长按 🔁：选循环范围<br>左右轻扫正文：在最近用的两种显示方式间快切（Aa 里设置）<br>手动滚动会暂停跟随，点「回到当前句」恢复</p>' +
         '<button type="button" class="cancel">关闭</button>';
       var acts = {
-        display: function () { togglePop('mode'); },
         range: function () { var c = findCue(mediaEl().currentTime); if (!c) { toast('先播放到某一句'); return; } startRange(c.i); },
         'exp-seg': exportSegments, 'imp-seg': function () { $('seg-file').click(); }, 'reset-seg': resetLocated,
         copy: function () { var t = passagesText(); if (!t) { toast('还没有标注'); return; } navigator.clipboard.writeText(t).then(function () { toast('已复制标注文本'); }, function () { toast('复制失败'); }); },
