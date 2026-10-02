@@ -121,7 +121,9 @@
   .para { position: relative; }
   .para .para-loop { position: absolute; left: -22px; top: 2px; font-size: 11px; cursor: pointer; opacity: 0; transition: opacity .15s; user-select: none; }
   .para:hover .para-loop, .para.looping .para-loop { opacity: 1; }
-  .para.looping { border-left-color: var(--accent) !important; }
+  /* 正在循环的小段整段描一圈强调色（与漏听段落同一语言，outline 不改布局）；说话人色条保留原色——
+     强调色与 Lenny 的蓝色同色，只把色条改成强调色时分不出「在循环」还是「换了说话人」，手机上尤其看不出循环到哪为止（2026-10-02 用户） */
+  .para.looping { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 0 6px 6px 0; }
   .para.looping .para-loop { filter: drop-shadow(0 0 2px var(--accent)); }
 
   .layout { display: flex; max-width: 1280px; margin: 0 auto; }
@@ -462,7 +464,7 @@
 #install-help p { margin: 4px 0; }
 @media(max-width:760px), (hover:none) and (pointer:coarse) { .offline-panel { margin: 10px 12px 0; } }
 </style>
-<meta name="app-build" content="efdbddba7694">
+<meta name="app-build" content="da8cc0733538">
 </head>
 <body class="show-zh-para">
 <header>
