@@ -464,7 +464,7 @@
 #install-help p { margin: 4px 0; }
 @media(max-width:760px), (hover:none) and (pointer:coarse) { .offline-panel { margin: 10px 12px 0; } }
 </style>
-<meta name="app-build" content="da8cc0733538">
+<meta name="app-build" content="cfe42b28acb3">
 </head>
 <body class="show-zh-para">
 <header>
@@ -796,7 +796,15 @@
   function paintReveal(id) { var on = state.revealed.has(id), el = document.getElementById('cue-' + id), zh = state.zhEls && state.zhEls[id]; if (el) el.classList.toggle('revealed', on); if (zh) zh.classList.toggle('revealed', on); }
   function paintReveals() { if (!state.revealed.size && !document.querySelector('#main .revealed')) return; state.cues.forEach(function (c) { paintReveal(c.i); }); }
   function setRevealed(range, on) { for (var n = range[0]; n <= range[1]; n++) if (state.cueById[n] && state.revealed.has(n) !== on) { if (on) state.revealed.add(n); else state.revealed.delete(n); paintReveal(n); } saveRevealed(); }
-  function revealScopeOf(id) { if (state.coverScope === 'para') { var el = document.getElementById('cue-' + id), para = el && el.closest('.para'); if (para) return [+para.dataset.lo, +para.dataset.hi]; } return [id, id]; }
+  /** 轻点揭开 / 盖回的范围：按「轻点范围」取一句或说话人的一轮；这句正在被循环时不越过循环对象的边界——
+   *  单句循环只揭这一句、关键句循环只揭关键句（按一轮揭会把还没听的下一句一起露出来）；段 / 漏听段落循环与不循环时照旧按一轮（2026-10-02 用户） */
+  function revealScopeOf(id) {
+    var lo = id, hi = id;
+    if (state.coverScope === 'para') { var el = document.getElementById('cue-' + id), para = el && el.closest('.para'); if (para) { lo = +para.dataset.lo; hi = +para.dataset.hi; } }
+    var R = state.loop && state.loop.range;
+    if (R && id >= R[0] && id <= R[1]) { lo = Math.max(lo, R[0]); hi = Math.min(hi, R[1]); }
+    return [lo, hi];
+  }
   function toggleRevealAt(id) { if (!state.cueById[id]) return; setRevealed(revealScopeOf(id), !state.revealed.has(id)); }
   /** 两个模式按钮的宽度 = 最长标签的宽度：切换时按钮不挪位，才能在同一位置连点 */
   function sizeModeButtons() {
@@ -1911,7 +1919,7 @@
         seg('mode', [['off', '英文'], ['cue', '逐句对照'], ['para', '段末对照'], ['only', '中文']], state.zhMode) +
         '<div class="t-row"><span>遮盖字幕 <span class="hint">' + (annotating && target === 'word' ? '· 选词时暂不遮盖，完成后恢复' : '· 轻点句子揭开 / 盖回') + '</span></span><button type="button" class="sw" id="t-cover" role="switch" aria-checked="' + state.blind + '" aria-label="遮盖字幕"></button></div>' +
         '<div class="t-row"><span>轻点范围</span>' + seg('scope', [['cue', '一句', !state.blind], ['para', '一段', !state.blind]], state.coverScope) + '</div>' +
-        '<div class="t-row"><span class="hint">一段 = 说话人的一轮</span><span><button type="button" class="mini" id="t-revealall"' + (state.blind ? '' : ' disabled') + '>全部揭开</button> <button type="button" class="mini" id="t-coverall"' + (state.blind ? '' : ' disabled') + '>全部盖上</button></span></div>';
+        '<div class="t-row"><span class="hint">一段 = 说话人的一轮；单句循环时只揭那一句</span><span><button type="button" class="mini" id="t-revealall"' + (state.blind ? '' : ' disabled') + '>全部揭开</button> <button type="button" class="mini" id="t-coverall"' + (state.blind ? '' : ' disabled') + '>全部盖上</button></span></div>';
       pop.querySelectorAll('[data-mode]').forEach(function (b) { b.onclick = function () { setZhMode(b.dataset.mode); renderPop(); }; });
       pop.querySelectorAll('[data-scope]').forEach(function (b) { b.onclick = function () { state.coverScope = b.dataset.scope; savePrefs(); renderPop(); }; });
       $('t-cover').onclick = function () { toggleBlind(); renderPop(); };
